@@ -1,8 +1,3 @@
-// Package ordo is a generic configuration loader with pluggable formats.
-//
-// JSON is always available (stdlib); YAML and TOML are provided behind
-// opt-out build tags: use "-tags noyaml" or "-tags notoml" to exclude a
-// format (and its third-party dependency) from the build.
 package ordo
 
 import (
@@ -15,23 +10,19 @@ import (
 	"sync"
 )
 
-// Format decodes and encodes a configuration serialization format.
 type Format interface {
-	// Name returns the canonical name of the format, e.g. "yaml".
 	Name() string
 
-	// Extensions returns the file extensions mapped to this format,
 	// lowercase and with a leading dot, e.g. [".yml", ".yaml"].
 	Extensions() []string
 
-	// Priority orders formats when probing a file whose extension is not
-	// registered: lower values are tried first.
+	// lower values are tried first.
 	Priority() int
 
-	// Unmarshal decodes data into v.
 	Unmarshal(data []byte, v any) error
+}
 
-	// Marshal encodes v.
+type Marshaler interface {
 	Marshal(v any) ([]byte, error)
 }
 
@@ -40,9 +31,6 @@ var (
 	formats   = map[string]Format{} // lowercase extension (with dot) -> format
 )
 
-// RegisterFormat registers f for each of its extensions, overwriting any
-// format previously registered for the same extension. It is safe for
-// concurrent use.
 func RegisterFormat(f Format) {
 	formatsMu.Lock()
 	defer formatsMu.Unlock()
@@ -61,8 +49,6 @@ func formatForExtension(ext string) (Format, bool) {
 	return f, ok
 }
 
-// registeredFormats returns the distinct registered formats ordered by
-// Priority, then Name.
 func registeredFormats() []Format {
 	formatsMu.RLock()
 	defer formatsMu.RUnlock()
@@ -88,9 +74,6 @@ func registeredFormats() []Format {
 	return ordered
 }
 
-// Load reads the file at path and decodes it into T. The format is chosen
-// by file extension; an unregistered extension is probed against all
-// registered formats in priority order until one succeeds.
 func Load[T any](path string) (*T, error) {
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -124,10 +107,6 @@ func Load[T any](path string) (*T, error) {
 	return nil, errors.Join(errs...)
 }
 
-// Save marshals v and writes it to path, creating parent directories as
-// needed (dir mode 0o750, file mode 0o600). The format is chosen by file
-// extension; an unregistered extension falls back to the highest-priority
-// registered format (yaml, when available).
 func Save(v any, path string) error {
 	f, ok := formatForExtension(filepath.Ext(path))
 	if !ok {
@@ -139,7 +118,12 @@ func Save(v any, path string) error {
 		f = available[0]
 	}
 
-	data, err := f.Marshal(v)
+	marshaler, ok := f.(Marshaler)
+	if !ok {
+		return fmt.Errorf("format %q does not support saving", f.Name())
+	}
+
+	data, err := marshaler.Marshal(v)
 	if err != nil {
 		return err
 	}
