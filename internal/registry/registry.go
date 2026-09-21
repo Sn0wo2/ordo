@@ -2,6 +2,8 @@ package registry
 
 import (
 	"cmp"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -63,4 +65,30 @@ func All() []Format {
 	})
 
 	return ordered
+}
+
+func ResolvePath(path string) string {
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		return path
+	}
+
+	base := strings.TrimSuffix(path, filepath.Ext(path))
+
+	seen := make(map[string]bool)
+	for _, f := range All() {
+		for _, ext := range f.Extensions() {
+			candidate := base + ext
+			if seen[candidate] {
+				continue
+			}
+
+			seen[candidate] = true
+
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate
+			}
+		}
+	}
+
+	return path
 }

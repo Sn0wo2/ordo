@@ -26,6 +26,8 @@ type Marshaler interface {
 func RegisterFormat(f Format) { registry.Register(f) }
 
 func Load[T any](path string) (*T, error) {
+	path = registry.ResolvePath(path)
+
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err

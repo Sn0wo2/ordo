@@ -1,6 +1,10 @@
 package ordo
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/Sn0wo2/ordo/internal/registry"
+)
 
 type Loader[T any] struct {
 	Defaults func(cfg *T)
@@ -11,6 +15,8 @@ type Loader[T any] struct {
 }
 
 func (l *Loader[T]) Load(path string) (*T, string, error) {
+	path = registry.ResolvePath(path)
+
 	cfg, err := Load[T](path)
 	if err != nil {
 		return nil, path, fmt.Errorf("failed to load config file %s: %w", path, err)
