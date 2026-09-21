@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
+
+	"github.com/Sn0wo2/ordo/internal/flat"
 )
 
 type hclFormat struct{}
@@ -75,7 +77,7 @@ func (hclFormat) Unmarshal(b []byte, v any) error {
 		return err
 	}
 
-	return decodeFlat(m, v)
+	return flat.Decode(m, v)
 }
 
 func (hclFormat) Marshal(v any) ([]byte, error) {

@@ -7,6 +7,8 @@ import (
 	"reflect"
 
 	"gopkg.in/ini.v1"
+
+	"github.com/Sn0wo2/ordo/internal/flat"
 )
 
 type iniFormat struct{}
@@ -21,17 +23,10 @@ func (iniFormat) Unmarshal(b []byte, v any) error {
 		return err
 	}
 
-	return decodeFlat(iniToMap(f), v)
-}
-
-// iniToMap flattens an ini file into a map: keys of the default section end
-// up at the top level, every other section becomes a nested map. All values
-// are strings; type assignment is handled by decodeFlat.
-func iniToMap(f *ini.File) map[string]any {
-	out := make(map[string]any)
+	m := make(map[string]any)
 
 	for _, key := range f.Section(ini.DefaultSection).Keys() {
-		out[key.Name()] = key.String()
+		m[key.Name()] = key.String()
 	}
 
 	for _, name := range f.SectionStrings() {
@@ -44,14 +39,13 @@ func iniToMap(f *ini.File) map[string]any {
 			section[key.Name()] = key.String()
 		}
 
-		out[name] = section
+		m[name] = section
 	}
 
-	return out
+	return flat.Decode(m, v)
 }
 
 func (iniFormat) Marshal(v any) ([]byte, error) {
-	// ReflectFrom requires a pointer to a struct; wrap values transparently.
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Pointer {
 		p := reflect.New(rv.Type())
@@ -59,13 +53,13 @@ func (iniFormat) Marshal(v any) ([]byte, error) {
 		rv = p
 	}
 
-	f := ini.Empty()
-	if err := f.ReflectFrom(rv.Interface()); err != nil {
+	file := ini.Empty()
+	if err := file.ReflectFrom(rv.Interface()); err != nil {
 		return nil, err
 	}
 
 	var buf bytes.Buffer
-	if _, err := f.WriteTo(&buf); err != nil {
+	if _, err := file.WriteTo(&buf); err != nil {
 		return nil, err
 	}
 

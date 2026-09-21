@@ -4,6 +4,8 @@ package ordo
 
 import (
 	"github.com/joho/godotenv"
+
+	"github.com/Sn0wo2/ordo/internal/flat"
 )
 
 type envFormat struct{}
@@ -18,7 +20,7 @@ func (envFormat) Unmarshal(b []byte, v any) error {
 		return err
 	}
 
-	return decodeFlat(m, v)
+	return flat.Decode(m, v)
 }
 
 func init() { RegisterFormat(envFormat{}) }
