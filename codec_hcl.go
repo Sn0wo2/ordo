@@ -32,7 +32,7 @@ func (hclFormat) Unmarshal(b []byte, v any) error {
 		return err
 	}
 
-	return decodeFlatMap(m, v)
+	return decodeFlat(m, v)
 }
 
 // hclBodyToMap flattens an HCL body into a map: attributes keep their names,

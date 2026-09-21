@@ -21,12 +21,12 @@ func (iniFormat) Unmarshal(b []byte, v any) error {
 		return err
 	}
 
-	return decodeFlatMap(iniToMap(f), v)
+	return decodeFlat(iniToMap(f), v)
 }
 
 // iniToMap flattens an ini file into a map: keys of the default section end
 // up at the top level, every other section becomes a nested map. All values
-// are strings; type assignment is handled by decodeFlatMap.
+// are strings; type assignment is handled by decodeFlat.
 func iniToMap(f *ini.File) map[string]any {
 	out := make(map[string]any)
 
