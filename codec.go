@@ -1,11 +1,12 @@
 package ordo
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -63,12 +64,12 @@ func registeredFormats() []Format {
 		ordered = append(ordered, f)
 	}
 
-	sort.Slice(ordered, func(i, j int) bool {
-		if ordered[i].Priority() != ordered[j].Priority() {
-			return ordered[i].Priority() < ordered[j].Priority()
+	slices.SortFunc(ordered, func(a, b Format) int {
+		if c := cmp.Compare(a.Priority(), b.Priority()); c != 0 {
+			return c
 		}
 
-		return ordered[i].Name() < ordered[j].Name()
+		return strings.Compare(a.Name(), b.Name())
 	})
 
 	return ordered
