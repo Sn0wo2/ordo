@@ -21,51 +21,45 @@ loader := &ordo.Loader[Config]{
 }
 
 cfg, path, err := loader.Load("./config.yml")
-if err != nil {
-    if errors.Is(err, os.ErrNotExist) { /* handle missing file */ }
-}
-
-// Persist back to the same file (format chosen by extension).
-err = ordo.Save(cfg, path)
 ```
 
-Primitives, without orchestration:
+If the path has no known extension, ordo tries every registered format in
+priority order and uses the first that decodes; a bare `./config` also resolves
+by trying each registered extension.
+
+## Options
 
 ```go
-cfg, err := ordo.Load[Config](path) // decode only
-err = ordo.Save(cfg, "./config.toml")
+cfg, err := ordo.Load[Config](path, ordo.WithFormat("json"), ordo.WithStrictTypes())
+
+err := ordo.Save(cfg, "./config.json")
 ```
 
-## Build tags
+- `WithFormat(name)` decode as the given format instead of by extension
+- `WithStrictTypes()` reject lossy type conversions
+- `Save` picks the format by extension, falling back to the highest-priority
+  registered format
 
-| Tag      | Effect                |
-| -------- | --------------------- |
-| (none)   | all formats           |
-| `noyaml` | YAML support excluded |
-| `notoml` | TOML support excluded |
-| `nohcl`  | HCL support excluded  |
-| `noini`  | INI support excluded  |
-| `noenv`  | ENV support excluded  |
-| `noedn`  | EDN support excluded  |
+## Built-in formats
 
-The env format is flat `KEY=value` and therefore read-only: `Save` refuses
-it. Read-only formats simply don't implement the optional `Marshaler`
-interface.
+| Format | Extensions | Priority | Build tag |
+| ------ | ---------- | -------- | --------- |
+| json   | `.json`    | 20       | —         |
+| xml    | `.xml`     | 80       | `noxml`   |
 
 ## Custom formats
 
-Implement the `Format` interface (decoding) and — optionally — `Marshaler`
-(writing) and register it (typically from an `init`):
+Implement the `Format` interface, or use `NewSimpleFormat`:
 
 ```go
-type iniFormat struct{}
-
-func (iniFormat) Name() string                     { return "ini" }
-func (iniFormat) Extensions() []string             { return []string{".ini"} }
-func (iniFormat) Priority() int                    { return 40 }
-func (iniFormat) Unmarshal(b []byte, v any) error  { /* ... */ }
-
-func (iniFormat) Marshal(v any) ([]byte, error) { /* optional */ }
-
-func init() { ordo.RegisterFormat(iniFormat{}) }
+func init() {
+    ordo.RegisterFormat(ordo.NewSimpleFormat(
+        "ini", []string{".ini"}, 40,
+        func(b []byte, v any) error { /* decode */ },
+        func(v any) ([]byte, error) { /* encode; omit or return unsupported */ },
+    ))
+}
 ```
+
+Formats without working `Marshal` should not be saved to; formats that cannot
+write at all can simply return an error.
