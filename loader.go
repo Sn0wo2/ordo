@@ -12,12 +12,14 @@ type Loader[T any] struct {
 	Validate func(cfg *T) error
 
 	OnLoaded func(path string)
+
+	Options []LoadOption
 }
 
 func (l *Loader[T]) Load(path string) (*T, string, error) {
 	path = utils.ResolvePath(path)
 
-	cfg, err := Load[T](path)
+	cfg, err := Load[T](path, l.Options...)
 	if err != nil {
 		return nil, path, fmt.Errorf("failed to load config file %s: %w", path, err)
 	}

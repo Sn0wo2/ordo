@@ -6,14 +6,33 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "github.com/Sn0wo2/ordo/internal/codec"
 	"github.com/Sn0wo2/ordo/internal/utils"
 )
 
-type Marshaler interface {
-	Marshal(v any) ([]byte, error)
+type Marshaler = utils.Marshaler
+
+type loadConfig struct {
+	forceFormat string
+	decodeOpts  utils.DecodeOptions
 }
 
-func Load[T any](path string) (*T, error) {
+type LoadOption func(*loadConfig)
+
+func WithFormat(name string) LoadOption {
+	return func(c *loadConfig) { c.forceFormat = name }
+}
+
+func WithStrictTypes() LoadOption {
+	return func(c *loadConfig) { c.decodeOpts.StrictTypes = true }
+}
+
+func Load[T any](path string, opts ...LoadOption) (*T, error) {
+	var lc loadConfig
+	for _, opt := range opts {
+		opt(&lc)
+	}
+
 	path = utils.ResolvePath(path)
 
 	data, err := os.ReadFile(filepath.Clean(path))
@@ -21,7 +40,29 @@ func Load[T any](path string) (*T, error) {
 		return nil, err
 	}
 
+	if lc.forceFormat != "" {
+		f, ok := utils.ByName(lc.forceFormat)
+		if !ok {
+			return nil, fmt.Errorf("unknown config format %q", lc.forceFormat)
+		}
+
+		if lc.decodeOpts != (utils.DecodeOptions{}) {
+			f = f.WithOption(lc.decodeOpts)
+		}
+
+		cfg := new(T)
+		if err := f.Unmarshal(data, cfg); err != nil {
+			return nil, err
+		}
+
+		return cfg, nil
+	}
+
 	if f, ok := utils.ForExtension(filepath.Ext(path)); ok {
+		if lc.decodeOpts != (utils.DecodeOptions{}) {
+			f = f.WithOption(lc.decodeOpts)
+		}
+
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -33,6 +74,10 @@ func Load[T any](path string) (*T, error) {
 	var errs []error
 
 	for _, f := range utils.All() {
+		if lc.decodeOpts != (utils.DecodeOptions{}) {
+			f = f.WithOption(lc.decodeOpts)
+		}
+
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err == nil {
 			return cfg, nil
@@ -59,12 +104,7 @@ func Save(v any, path string) error {
 		f = available[0]
 	}
 
-	marshaler, ok := f.(Marshaler)
-	if !ok {
-		return fmt.Errorf("format %q does not support saving", f.Name())
-	}
-
-	data, err := marshaler.Marshal(v)
+	data, err := f.Marshal(v)
 	if err != nil {
 		return err
 	}
