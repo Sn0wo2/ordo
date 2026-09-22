@@ -6,50 +6,22 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/Sn0wo2/ordo/internal/codec"
 	"github.com/Sn0wo2/ordo/internal/utils"
 )
 
-type Marshaler = utils.Marshaler
-
-type loadConfig struct {
-	forceFormat string
-}
-
-type LoadOption func(*loadConfig)
-
-func WithFormat(name string) LoadOption {
-	return func(c *loadConfig) { c.forceFormat = name }
-}
-
-func Load[T any](path string, opts ...LoadOption) (*T, error) {
-	var lc loadConfig
-	for _, opt := range opts {
-		opt(&lc)
+func Load[T any](path string, formats ...Format) (*T, error) {
+	if len(formats) == 0 {
+		return nil, errors.New("no config formats provided")
 	}
 
-	path = utils.ResolvePath(path)
+	path = utils.ResolvePath(path, formats)
 
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}
 
-	if lc.forceFormat != "" {
-		f, ok := utils.ByName(lc.forceFormat)
-		if !ok {
-			return nil, fmt.Errorf("unknown config format %q", lc.forceFormat)
-		}
-
-		cfg := new(T)
-		if err := f.Unmarshal(data, cfg); err != nil {
-			return nil, err
-		}
-
-		return cfg, nil
-	}
-
-	if f, ok := utils.ForExtension(filepath.Ext(path)); ok {
+	if f, ok := utils.FormatForExtension(formats, filepath.Ext(path)); ok {
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -60,7 +32,7 @@ func Load[T any](path string, opts ...LoadOption) (*T, error) {
 
 	var errs []error
 
-	for _, f := range utils.All() {
+	for _, f := range utils.SortedFormats(formats) {
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err == nil {
 			return cfg, nil
@@ -69,22 +41,17 @@ func Load[T any](path string, opts ...LoadOption) (*T, error) {
 		}
 	}
 
-	if len(errs) == 0 {
-		return nil, errors.New("no config format registered")
-	}
-
 	return nil, errors.Join(errs...)
 }
 
-func Save(v any, path string) error {
-	f, ok := utils.ForExtension(filepath.Ext(path))
-	if !ok {
-		available := utils.All()
-		if len(available) == 0 {
-			return errors.New("no config format registered")
-		}
+func Save(v any, path string, formats ...Format) error {
+	if len(formats) == 0 {
+		return errors.New("no config formats provided")
+	}
 
-		f = available[0]
+	f, ok := utils.FormatForExtension(formats, filepath.Ext(path))
+	if !ok {
+		f = utils.SortedFormats(formats)[0]
 	}
 
 	data, err := f.Marshal(v)

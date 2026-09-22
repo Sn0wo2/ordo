@@ -7,19 +7,19 @@ import (
 )
 
 type Loader[T any] struct {
+	Formats []Format
+
 	Defaults func(cfg *T)
 
 	Validate func(cfg *T) error
 
 	OnLoaded func(path string)
-
-	Options []LoadOption
 }
 
 func (l *Loader[T]) Load(path string) (*T, string, error) {
-	path = utils.ResolvePath(path)
+	path = utils.ResolvePath(path, l.Formats)
 
-	cfg, err := Load[T](path, l.Options...)
+	cfg, err := Load[T](path, l.Formats...)
 	if err != nil {
 		return nil, path, fmt.Errorf("failed to load config file %s: %w", path, err)
 	}
@@ -39,4 +39,8 @@ func (l *Loader[T]) Load(path string) (*T, string, error) {
 	}
 
 	return cfg, path, nil
+}
+
+func (l *Loader[T]) Save(cfg *T, path string) error {
+	return Save(cfg, path, l.Formats...)
 }

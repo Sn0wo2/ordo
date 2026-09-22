@@ -20,6 +20,8 @@ type testConfig struct {
 	Nested testNested `json:"nested" yaml:"nested" toml:"nested"`
 }
 
+var testFormats = []ordo.Format{ordo.JSON}
+
 func writeTestFile(t *testing.T, path, content string) string {
 	t.Helper()
 
@@ -38,7 +40,7 @@ func TestLoadJSON(t *testing.T) {
 	path := writeTestFile(t, filepath.Join(t.TempDir(), "config.json"),
 		`{"name":"cat","port":3000,"nested":{"enabled":true}}`)
 
-	cfg, err := ordo.Load[testConfig](path)
+	cfg, err := ordo.Load[testConfig](path, testFormats...)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -49,12 +51,12 @@ func TestLoadJSON(t *testing.T) {
 }
 
 func TestLoadUnknownExtensionFallback(t *testing.T) {
-	// Unknown extension: registered formats are probed in priority order
-	// until one succeeds (JSON is always registered).
+	// Unknown extension: the given formats are probed in priority order
+	// until one succeeds.
 	path := writeTestFile(t, filepath.Join(t.TempDir(), "config.conf"),
 		`{"name":"dog","port":8080,"nested":{"enabled":false}}`)
 
-	cfg, err := ordo.Load[testConfig](path)
+	cfg, err := ordo.Load[testConfig](path, testFormats...)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -67,13 +69,13 @@ func TestLoadUnknownExtensionFallback(t *testing.T) {
 func TestLoadInvalidContent(t *testing.T) {
 	path := writeTestFile(t, filepath.Join(t.TempDir(), "config.json"), `{invalid`)
 
-	if _, err := ordo.Load[testConfig](path); err == nil {
+	if _, err := ordo.Load[testConfig](path, testFormats...); err == nil {
 		t.Fatal("expected error for invalid content")
 	}
 }
 
 func TestLoadMissingFile(t *testing.T) {
-	_, err := ordo.Load[testConfig](filepath.Join(t.TempDir(), "missing.json"))
+	_, err := ordo.Load[testConfig](filepath.Join(t.TempDir(), "missing.json"), testFormats...)
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -86,11 +88,11 @@ func TestLoadMissingFile(t *testing.T) {
 func TestSaveCreatesDirectories(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "a", "b", "config.json")
 
-	if err := ordo.Save(testConfig{Name: "saved", Port: 1}, path); err != nil {
+	if err := ordo.Save(testConfig{Name: "saved", Port: 1}, path, testFormats...); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
-	cfg, err := ordo.Load[testConfig](path)
+	cfg, err := ordo.Load[testConfig](path, testFormats...)
 	if err != nil {
 		t.Fatalf("load back: %v", err)
 	}
@@ -109,6 +111,7 @@ func TestLoaderHooks(t *testing.T) {
 	)
 
 	loader := &ordo.Loader[testConfig]{
+		Formats: testFormats,
 		Defaults: func(cfg *testConfig) {
 			defaultsCalled = true
 
@@ -148,6 +151,7 @@ func TestLoaderValidateError(t *testing.T) {
 	path := writeTestFile(t, filepath.Join(t.TempDir(), "config.json"), `{"port":1}`)
 
 	loader := &ordo.Loader[testConfig]{
+		Formats: testFormats,
 		Validate: func(cfg *testConfig) error {
 			return errors.New("name is required")
 		},
@@ -169,7 +173,7 @@ func TestLoaderValidateError(t *testing.T) {
 }
 
 func TestLoaderLoadError(t *testing.T) {
-	loader := &ordo.Loader[testConfig]{}
+	loader := &ordo.Loader[testConfig]{Formats: testFormats}
 
 	_, _, err := loader.Load(filepath.Join(t.TempDir(), "missing.json"))
 	if err == nil {
@@ -188,7 +192,7 @@ func TestLoaderLoadError(t *testing.T) {
 func TestNilLoaderHooksAreSkipped(t *testing.T) {
 	path := writeTestFile(t, filepath.Join(t.TempDir(), "config.json"), `{}`)
 
-	var loader ordo.Loader[testConfig]
+	loader := ordo.Loader[testConfig]{Formats: testFormats}
 
 	if _, _, err := loader.Load(path); err != nil {
 		t.Fatalf("load: %v", err)

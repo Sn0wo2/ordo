@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 )
 
 type Marshaler interface {
@@ -43,54 +42,8 @@ func (f SimpleFormat) Priority() int                   { return f.priority }
 func (f SimpleFormat) Unmarshal(b []byte, v any) error { return f.unmarshal(b, v) }
 func (f SimpleFormat) Marshal(v any) ([]byte, error)   { return f.marshal(v) }
 
-var (
-	mu          sync.RWMutex
-	byExtension = map[string]Format{}
-	byName      = map[string]Format{}
-)
-
-func Register(f Format) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	byName[f.Name()] = f
-
-	for _, ext := range f.Extensions() {
-		byExtension[strings.ToLower(ext)] = f
-	}
-}
-
-func ByName(name string) (Format, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	f, ok := byName[name]
-
-	return f, ok
-}
-
-func ForExtension(ext string) (Format, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	f, ok := byExtension[strings.ToLower(ext)]
-
-	return f, ok
-}
-
-func All() []Format {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	seen := make(map[string]Format, len(byExtension))
-	for _, f := range byExtension {
-		seen[f.Name()] = f
-	}
-
-	ordered := make([]Format, 0, len(seen))
-	for _, f := range seen {
-		ordered = append(ordered, f)
-	}
+func SortedFormats(formats []Format) []Format {
+	ordered := slices.Clone(formats)
 
 	slices.SortFunc(ordered, func(a, b Format) int {
 		if c := cmp.Compare(a.Priority(), b.Priority()); c != 0 {
@@ -103,7 +56,21 @@ func All() []Format {
 	return ordered
 }
 
-func ResolvePath(path string) string {
+func FormatForExtension(formats []Format, ext string) (Format, bool) {
+	ext = strings.ToLower(ext)
+
+	for _, f := range formats {
+		for _, e := range f.Extensions() {
+			if strings.ToLower(e) == ext {
+				return f, true
+			}
+		}
+	}
+
+	return nil, false
+}
+
+func ResolvePath(path string, formats []Format) string {
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		return path
 	}
@@ -111,7 +78,7 @@ func ResolvePath(path string) string {
 	base := strings.TrimSuffix(path, filepath.Ext(path))
 
 	seen := make(map[string]bool)
-	for _, f := range All() {
+	for _, f := range SortedFormats(formats) {
 		for _, ext := range f.Extensions() {
 			candidate := base + ext
 			if seen[candidate] {
