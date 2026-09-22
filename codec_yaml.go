@@ -2,7 +2,9 @@
 
 package ordo
 
-import "gopkg.in/yaml.v3"
+import (
+	"gopkg.in/yaml.v3"
+)
 
 type yamlFormat struct{}
 

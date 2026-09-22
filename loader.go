@@ -3,7 +3,7 @@ package ordo
 import (
 	"fmt"
 
-	"github.com/Sn0wo2/ordo/internal/registry"
+	"github.com/Sn0wo2/ordo/internal/utils"
 )
 
 type Loader[T any] struct {
@@ -15,7 +15,7 @@ type Loader[T any] struct {
 }
 
 func (l *Loader[T]) Load(path string) (*T, string, error) {
-	path = registry.ResolvePath(path)
+	path = utils.ResolvePath(path)
 
 	cfg, err := Load[T](path)
 	if err != nil {

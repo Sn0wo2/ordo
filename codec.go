@@ -6,34 +6,22 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Sn0wo2/ordo/internal/registry"
+	"github.com/Sn0wo2/ordo/internal/utils"
 )
-
-type Format interface {
-	Name() string
-
-	Extensions() []string
-
-	Priority() int
-
-	Unmarshal(data []byte, v any) error
-}
 
 type Marshaler interface {
 	Marshal(v any) ([]byte, error)
 }
 
-func RegisterFormat(f Format) { registry.Register(f) }
-
 func Load[T any](path string) (*T, error) {
-	path = registry.ResolvePath(path)
+	path = utils.ResolvePath(path)
 
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}
 
-	if f, ok := registry.ForExtension(filepath.Ext(path)); ok {
+	if f, ok := utils.ForExtension(filepath.Ext(path)); ok {
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -44,7 +32,7 @@ func Load[T any](path string) (*T, error) {
 
 	var errs []error
 
-	for _, f := range registry.All() {
+	for _, f := range utils.All() {
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err == nil {
 			return cfg, nil
@@ -61,9 +49,9 @@ func Load[T any](path string) (*T, error) {
 }
 
 func Save(v any, path string) error {
-	f, ok := registry.ForExtension(filepath.Ext(path))
+	f, ok := utils.ForExtension(filepath.Ext(path))
 	if !ok {
-		available := registry.All()
+		available := utils.All()
 		if len(available) == 0 {
 			return errors.New("no config format registered")
 		}

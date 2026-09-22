@@ -2,7 +2,9 @@
 
 package ordo
 
-import "github.com/pelletier/go-toml/v2"
+import (
+	"github.com/pelletier/go-toml/v2"
+)
 
 type tomlFormat struct{}
 

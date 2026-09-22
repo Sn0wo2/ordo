@@ -2,7 +2,9 @@
 
 package ordo
 
-import "olympos.io/encoding/edn"
+import (
+	"olympos.io/encoding/edn"
+)
 
 type ednFormat struct{}
 

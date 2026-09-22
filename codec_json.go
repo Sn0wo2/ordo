@@ -1,6 +1,8 @@
 package ordo
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type jsonFormat struct{}
 
