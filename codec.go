@@ -14,17 +14,12 @@ type Marshaler = utils.Marshaler
 
 type loadConfig struct {
 	forceFormat string
-	decodeOpts  utils.DecodeOptions
 }
 
 type LoadOption func(*loadConfig)
 
 func WithFormat(name string) LoadOption {
 	return func(c *loadConfig) { c.forceFormat = name }
-}
-
-func WithStrictTypes() LoadOption {
-	return func(c *loadConfig) { c.decodeOpts.StrictTypes = true }
 }
 
 func Load[T any](path string, opts ...LoadOption) (*T, error) {
@@ -46,10 +41,6 @@ func Load[T any](path string, opts ...LoadOption) (*T, error) {
 			return nil, fmt.Errorf("unknown config format %q", lc.forceFormat)
 		}
 
-		if lc.decodeOpts != (utils.DecodeOptions{}) {
-			f = f.WithOption(lc.decodeOpts)
-		}
-
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -59,10 +50,6 @@ func Load[T any](path string, opts ...LoadOption) (*T, error) {
 	}
 
 	if f, ok := utils.ForExtension(filepath.Ext(path)); ok {
-		if lc.decodeOpts != (utils.DecodeOptions{}) {
-			f = f.WithOption(lc.decodeOpts)
-		}
-
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
 			return nil, err
@@ -74,10 +61,6 @@ func Load[T any](path string, opts ...LoadOption) (*T, error) {
 	var errs []error
 
 	for _, f := range utils.All() {
-		if lc.decodeOpts != (utils.DecodeOptions{}) {
-			f = f.WithOption(lc.decodeOpts)
-		}
-
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err == nil {
 			return cfg, nil

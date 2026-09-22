@@ -30,13 +30,12 @@ by trying each registered extension.
 ## Options
 
 ```go
-cfg, err := ordo.Load[Config](path, ordo.WithFormat("json"), ordo.WithStrictTypes())
+cfg, err := ordo.Load[Config](path, ordo.WithFormat("json"))
 
 err := ordo.Save(cfg, "./config.json")
 ```
 
 - `WithFormat(name)` decode as the given format instead of by extension
-- `WithStrictTypes()` reject lossy type conversions
 - `Save` picks the format by extension, falling back to the highest-priority
   registered format
 

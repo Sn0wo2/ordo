@@ -13,10 +13,6 @@ type Marshaler interface {
 	Marshal(v any) ([]byte, error)
 }
 
-type DecodeOptions struct {
-	StrictTypes bool
-}
-
 type Format interface {
 	Marshaler
 
@@ -27,8 +23,6 @@ type Format interface {
 	Priority() int
 
 	Unmarshal(data []byte, v any) error
-
-	WithOption(opt DecodeOptions) Format
 }
 
 type SimpleFormat struct {
@@ -48,8 +42,6 @@ func (f SimpleFormat) Extensions() []string            { return f.extension }
 func (f SimpleFormat) Priority() int                   { return f.priority }
 func (f SimpleFormat) Unmarshal(b []byte, v any) error { return f.unmarshal(b, v) }
 func (f SimpleFormat) Marshal(v any) ([]byte, error)   { return f.marshal(v) }
-
-func (f SimpleFormat) WithOption(DecodeOptions) Format { return f }
 
 var (
 	mu          sync.RWMutex
