@@ -4,12 +4,9 @@
 
 ## Usage
 
-Formats are explicit: pick the built-in presets you need and hand them to the
-loader.
-
 ```go
 loader := &ordo.Loader[Config]{
-    Formats: []ordo.Format{ordo.JSON, ordo.XML},
+    Formats: []format.Format{format.JSON, format.XML},
     Defaults: func(cfg *Config) {
         if cfg.Address == "" {
             cfg.Address = ":3000"
@@ -33,27 +30,42 @@ If the path has no matching extension, the given formats are probed in
 priority order until one decodes; a bare `./config` also resolves by trying
 each format's extensions.
 
-Primitives, without orchestration:
+Without orchestration, a load with default/merge support:
 
 ```go
-cfg, err := ordo.Load[Config](path, ordo.JSON)
-err = ordo.Save(cfg, "./config.json", ordo.JSON)
+cfg, err := ordo.Load[Config](path, format.JSON)
+```
+
+`Loader` additionally supports seeding from a default config and a custom
+merge hook:
+
+```go
+loader := &ordo.Loader[Config]{
+    Formats: []format.Format{format.JSON},
+    Default: &Config{Address: ":3000"},
+    Merge: func(base *Config, f format.Format, data []byte) (*Config, error) {
+        // decode over the base as you see fit
+        return base, f.Unmarshal(data, base)
+    },
+}
 ```
 
 ## Built-in formats
 
-| Preset    | Format | Extensions | Priority | Build tag |
-| --------- | ------ | ---------- | -------- | --------- |
-| `ordo.JSON` | json | `.json`    | 20       | —         |
-| `ordo.XML`  | xml  | `.xml`     | 80       | `noxml`   |
+Presets live in the `format` package:
+
+| Preset        | Format | Extensions | Priority |
+| ------------- | ------ | ---------- | -------- |
+| `format.JSON` | json   | `.json`    | 20       |
+| `format.XML`  | xml    | `.xml`     | 80       |
 
 ## Custom formats
 
-Implement the `Format` interface, or use `NewSimpleFormat`, and pass it like
-any built-in preset:
+Implement the `format.Format` interface, or use `format.NewFormatter`, and
+pass it like any built-in preset:
 
 ```go
-var ini = ordo.NewSimpleFormat(
+var ini = format.NewFormatter(
     "ini", []string{".ini"}, 40,
     func(b []byte, v any) error { /* decode */ },
     func(v any) ([]byte, error) { /* encode; omit or return unsupported */ },
