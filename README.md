@@ -56,8 +56,8 @@ Presets live in the `format` package:
 
 | Preset        | Format | Extensions | Priority |
 | ------------- | ------ | ---------- | -------- |
-| `format.JSON` | json   | `.json`    | 20       |
-| `format.XML`  | xml    | `.xml`     | 80       |
+| `format.JSON` | json   | `.json`    | 10       |
+| `format.XML`  | xml    | `.xml`     | 10       |
 
 ## Custom formats
 
