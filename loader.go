@@ -11,11 +11,11 @@ import (
 )
 
 type Loader[T any] struct {
-	Formats []format.Format
+	Formats []format.Format[T]
 
 	Default *T
 
-	Merge func(defaultCfg *T, f format.Format, data []byte) (*T, error)
+	Merge func(defaultCfg *T, f format.Format[T], data []byte) (*T, error)
 
 	Defaults func(cfg *T)
 
@@ -85,7 +85,7 @@ func (l *Loader[T]) Save(cfg *T, path string) error {
 	return utils.Save(cfg, path, l.Formats...)
 }
 
-func Load[T any](path string, formats ...format.Format) (*T, error) {
+func Load[T any](path string, formats ...format.Format[T]) (*T, error) {
 	if len(formats) == 0 {
 		return nil, errors.New("no config formats provided")
 	}

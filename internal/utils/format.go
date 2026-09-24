@@ -12,7 +12,7 @@ import (
 	"github.com/Sn0wo2/ordo/format"
 )
 
-func Decode[T any](data []byte, path string, formats []format.Format) (*T, format.Format, error) {
+func Decode[T any](data []byte, path string, formats []format.Format[T]) (*T, format.Format[T], error) {
 	if f, ok := FormatForExtension(formats, filepath.Ext(path)); ok {
 		cfg := new(T)
 		if err := f.Unmarshal(data, cfg); err != nil {
@@ -36,7 +36,7 @@ func Decode[T any](data []byte, path string, formats []format.Format) (*T, forma
 	return nil, nil, errors.Join(errs...)
 }
 
-func Save(v any, path string, formats ...format.Format) error {
+func Save[T any](v *T, path string, formats ...format.Format[T]) error {
 	if len(formats) == 0 {
 		return errors.New("no config formats provided")
 	}
@@ -58,10 +58,10 @@ func Save(v any, path string, formats ...format.Format) error {
 	return os.WriteFile(filepath.Clean(path), data, 0o600)
 }
 
-func SortedFormats(formats []format.Format) []format.Format {
+func SortedFormats[T any](formats []format.Format[T]) []format.Format[T] {
 	ordered := slices.Clone(formats)
 
-	slices.SortFunc(ordered, func(a, b format.Format) int {
+	slices.SortFunc(ordered, func(a, b format.Format[T]) int {
 		if c := cmp.Compare(a.Priority(), b.Priority()); c != 0 {
 			return c
 		}
@@ -72,7 +72,7 @@ func SortedFormats(formats []format.Format) []format.Format {
 	return ordered
 }
 
-func FormatForExtension(formats []format.Format, ext string) (format.Format, bool) {
+func FormatForExtension[T any](formats []format.Format[T], ext string) (format.Format[T], bool) {
 	ext = strings.ToLower(ext)
 
 	for _, f := range formats {
@@ -86,7 +86,7 @@ func FormatForExtension(formats []format.Format, ext string) (format.Format, boo
 	return nil, false
 }
 
-func ResolvePath(path string, formats []format.Format) string {
+func ResolvePath[T any](path string, formats []format.Format[T]) string {
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		return path
 	}

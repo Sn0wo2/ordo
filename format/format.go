@@ -1,11 +1,7 @@
 package format
 
-type Marshaler interface {
-	Marshal(v any) ([]byte, error)
-}
-
-type Format interface {
-	Marshaler
+type Format[T any] interface {
+	Marshal(v *T) ([]byte, error)
 
 	Name() string
 
@@ -13,10 +9,10 @@ type Format interface {
 
 	Priority() int
 
-	Unmarshal(data []byte, v any) error
+	Unmarshal(data []byte, v *T) error
 }
 
-type Formatter struct {
+type Formatter[T any] struct {
 	name      string
 	extension []string
 	unmarshal func([]byte, any) error
@@ -24,16 +20,16 @@ type Formatter struct {
 	priority  int
 }
 
-func NewFormatter(name string, extension []string, priority int, unmarshal func([]byte, any) error, marshal func(any) ([]byte, error)) Formatter {
-	return Formatter{name: name, extension: extension, priority: priority, unmarshal: unmarshal, marshal: marshal}
+func NewFormatter[T any](name string, extension []string, priority int, unmarshal func([]byte, any) error, marshal func(any) ([]byte, error)) Formatter[T] {
+	return Formatter[T]{name: name, extension: extension, priority: priority, unmarshal: unmarshal, marshal: marshal}
 }
 
-func (f Formatter) Name() string { return f.name }
+func (f Formatter[T]) Name() string { return f.name }
 
-func (f Formatter) Extensions() []string { return f.extension }
+func (f Formatter[T]) Extensions() []string { return f.extension }
 
-func (f Formatter) Priority() int { return f.priority }
+func (f Formatter[T]) Priority() int { return f.priority }
 
-func (f Formatter) Unmarshal(b []byte, v any) error { return f.unmarshal(b, v) }
+func (f Formatter[T]) Unmarshal(b []byte, v *T) error { return f.unmarshal(b, v) }
 
-func (f Formatter) Marshal(v any) ([]byte, error) { return f.marshal(v) }
+func (f Formatter[T]) Marshal(v *T) ([]byte, error) { return f.marshal(v) }
