@@ -8,19 +8,17 @@ import (
 func DeepCopy[T any](src *T) (*T, error) {
 	if c, ok := any(src).(interface{ DeepCopy() T }); ok {
 		dst := c.DeepCopy()
+
 		return &dst, nil
 	}
 
 	var copyValue func(reflect.Value) (reflect.Value, error)
+
 	copyValue = func(src reflect.Value) (reflect.Value, error) {
 		needsDeepCopy := func(k reflect.Kind) bool {
-			switch k {
-			case reflect.Pointer, reflect.Interface, reflect.Slice, reflect.Map,
-				reflect.Array, reflect.Struct, reflect.Func, reflect.Chan, reflect.UnsafePointer:
-				return true
-			default:
-				return false
-			}
+			return k == reflect.Pointer || k == reflect.Interface || k == reflect.Slice ||
+				k == reflect.Map || k == reflect.Array || k == reflect.Struct ||
+				k == reflect.Func || k == reflect.Chan || k == reflect.UnsafePointer
 		}
 
 		switch src.Kind() {
@@ -61,7 +59,7 @@ func DeepCopy[T any](src *T) (*T, error) {
 			}
 
 			dst := reflect.MakeSlice(src.Type(), src.Len(), src.Len())
-			for i := 0; i < src.Len(); i++ {
+			for i := range src.Len() {
 				elem, err := copyValue(src.Index(i))
 				if err != nil {
 					return reflect.Value{}, err
@@ -77,6 +75,7 @@ func DeepCopy[T any](src *T) (*T, error) {
 			}
 
 			dst := reflect.MakeMapWithSize(src.Type(), src.Len())
+
 			iter := src.MapRange()
 			for iter.Next() {
 				key, err := copyValue(iter.Key())
@@ -95,7 +94,7 @@ func DeepCopy[T any](src *T) (*T, error) {
 			return dst, nil
 		case reflect.Array:
 			dst := reflect.New(src.Type()).Elem()
-			for i := 0; i < src.Len(); i++ {
+			for i := range src.Len() {
 				elem, err := copyValue(src.Index(i))
 				if err != nil {
 					return reflect.Value{}, err
@@ -109,7 +108,7 @@ func DeepCopy[T any](src *T) (*T, error) {
 			dst := reflect.New(src.Type()).Elem()
 			dst.Set(src)
 
-			for i := 0; i < src.NumField(); i++ {
+			for i := range src.NumField() {
 				if !dst.Field(i).CanSet() || !needsDeepCopy(src.Field(i).Kind()) {
 					continue
 				}
@@ -123,9 +122,14 @@ func DeepCopy[T any](src *T) (*T, error) {
 			}
 
 			return dst, nil
-		default:
+		case reflect.Invalid, reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16,
+			reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+			reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
+			reflect.Complex64, reflect.Complex128, reflect.String:
 			return src, nil
 		}
+
+		return src, nil
 	}
 
 	v, err := copyValue(reflect.ValueOf(src))
@@ -134,5 +138,6 @@ func DeepCopy[T any](src *T) (*T, error) {
 	}
 
 	dst, _ := v.Interface().(*T)
+
 	return dst, nil
 }
