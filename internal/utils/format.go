@@ -94,6 +94,7 @@ func ResolvePath[T any](path string, formats []format.Format[T]) string {
 	base := strings.TrimSuffix(path, filepath.Ext(path))
 
 	seen := make(map[string]bool)
+
 	for _, f := range SortedFormats(formats) {
 		for _, ext := range f.Extensions() {
 			candidate := base + ext

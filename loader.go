@@ -47,6 +47,7 @@ func (l *Loader[T]) Load(path string) (*T, string, error) {
 		}
 
 		base := new(T)
+
 		if l.Default != nil {
 			var err error
 			if base, err = utils.DeepCopy(l.Default); err != nil {
@@ -98,5 +99,6 @@ func Load[T any](path string, formats ...format.Format[T]) (*T, error) {
 	}
 
 	cfg, _, err := utils.Decode[T](data, path, formats)
+
 	return cfg, err
 }

@@ -8,10 +8,12 @@ import (
 func DeepCopy[T any](src *T) (*T, error) {
 	if c, ok := any(src).(interface{ DeepCopy() T }); ok {
 		dst := c.DeepCopy()
+
 		return &dst, nil
 	}
 
 	var copyValue func(reflect.Value) (reflect.Value, error)
+
 	copyValue = func(src reflect.Value) (reflect.Value, error) {
 		needsDeepCopy := func(k reflect.Kind) bool {
 			switch k {
@@ -77,6 +79,7 @@ func DeepCopy[T any](src *T) (*T, error) {
 			}
 
 			dst := reflect.MakeMapWithSize(src.Type(), src.Len())
+
 			iter := src.MapRange()
 			for iter.Next() {
 				key, err := copyValue(iter.Key())
@@ -134,5 +137,6 @@ func DeepCopy[T any](src *T) (*T, error) {
 	}
 
 	dst, _ := v.Interface().(*T)
+
 	return dst, nil
 }
