@@ -10,12 +10,12 @@ test:
 	go test $(if $(filter 1,$(shell go env CGO_ENABLED)),-race) ./...
 
 build:
-	go build ./...
+	go build -mod=readonly ./...
 
 security:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-ci: lint test security
+ci: lint test security build
 
 release:
 	goreleaser release --clean
